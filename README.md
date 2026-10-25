@@ -73,6 +73,40 @@ that runs the app with gunicorn on Render's free plan and redeploys on every pus
 Free instances sleep after about 15 minutes without traffic, so the first visit after a
 pause takes around 30 seconds. `/healthz` is the health-check endpoint.
 
+## Deploy to Google Cloud Run
+
+The repo also includes a `Dockerfile` and a GitHub Actions workflow
+(`.github/workflows/deploy.yml`) that runs the tests and then deploys to Cloud Run on
+every push to `main`. The workflow is skipped until the GitHub variables below exist.
+
+1. Create a Google Cloud project with billing turned on (Cloud Run has a free monthly
+   allowance; an idle service scales to zero). Setting a budget alert is a good idea.
+2. Open Cloud Shell, clone this repo and run the one-time setup script:
+
+   ```bash
+   bash deploy/gcp-setup.sh YOUR_PROJECT_ID us-central1
+   ```
+
+   It enables the APIs, creates a `github-deployer` service account and lets this repo
+   sign in as it with Workload Identity Federation, so no JSON keys are stored in GitHub.
+3. In GitHub, go to **Settings → Secrets and variables → Actions → Variables** and add the
+   four variables the script prints (`GCP_PROJECT_ID`, `GCP_REGION`,
+   `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`).
+4. Open **Actions → Deploy to Cloud Run → Run workflow**. The service URL appears at the
+   end of the deploy step and in the Cloud Run console.
+5. Optional, for AI explanations: store the key in Secret Manager and attach it once.
+   Later deploys keep it.
+
+   ```bash
+   printf '%s' 'sk-ant-...' | gcloud secrets create anthropic-api-key --data-file=-
+   PROJECT_NUMBER=$(gcloud projects describe YOUR_PROJECT_ID --format='value(projectNumber)')
+   gcloud secrets add-iam-policy-binding anthropic-api-key \
+     --member="serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+     --role=roles/secretmanager.secretAccessor
+   gcloud run services update cloud-bill-explainer --region us-central1 \
+     --update-secrets=ANTHROPIC_API_KEY=anthropic-api-key:latest
+   ```
+
 ## Tests
 
 ```bash
@@ -160,6 +194,7 @@ templates/            Jinja pages (Tailwind CSS via CDN, blue theme)
 static/               upload drag-and-drop, Chart.js donut, print styles
 sample_data/          fake one-month bill + generator script
 tests/                pytest suite
+deploy/               one-time Google Cloud setup script for Cloud Run
 ```
 
 ## Out of scope (for now)
