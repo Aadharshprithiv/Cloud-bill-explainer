@@ -53,8 +53,25 @@ export ANTHROPIC_MODEL=claude-opus-5-5   # optional
 flask --app app run          # then open http://127.0.0.1:5000
 ```
 
+For a production-style server: `gunicorn app:app --workers 1 --threads 4 --timeout 120`.
+
 Click **Try with sample bill** to see a full report without uploading anything.
 Pages load Tailwind CSS and Chart.js from public CDNs, so the browser needs internet access.
+
+## Deploy to Render
+
+The repo includes a [Render Blueprint](https://render.com/docs/blueprint-spec) (`render.yaml`)
+that runs the app with gunicorn on Render's free plan and redeploys on every push to `main`.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Aadharshprithiv/Cloud-bill-explainer)
+
+1. Click the button above (or in the Render dashboard: **New → Blueprint** and pick this repo).
+2. Render asks for `ANTHROPIC_API_KEY`. Paste a key to turn on AI explanations, or leave it
+   empty to use template explanations.
+3. Click **Apply**. The first build takes a few minutes; the app's URL appears on the service page.
+
+Free instances sleep after about 15 minutes without traffic, so the first visit after a
+pause takes around 30 seconds. `/healthz` is the health-check endpoint.
 
 ## Tests
 

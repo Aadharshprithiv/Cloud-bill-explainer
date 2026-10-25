@@ -57,6 +57,12 @@ def test_upload_sample_file(client, sample_bytes):
     assert "made-up data" not in html
 
 
+def test_health_check(client):
+    resp = client.get("/healthz")
+    assert resp.status_code == 200
+    assert resp.get_data(as_text=True) == "ok"
+
+
 # --- Upload errors -------------------------------------------------------------
 
 def test_upload_without_file(client):

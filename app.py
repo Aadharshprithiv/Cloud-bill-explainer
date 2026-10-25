@@ -51,6 +51,10 @@ def create_app(config: dict | None = None) -> Flask:
     def index():
         return render_template("index.html")
 
+    @app.get("/healthz")
+    def healthz():
+        return "ok"
+
     @app.get("/privacy")
     def privacy():
         return render_template("privacy.html")
