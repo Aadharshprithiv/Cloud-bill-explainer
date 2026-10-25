@@ -63,7 +63,9 @@ python -m pytest
 ```
 
 Tests cover the parser, every waste rule, the app routes, and the AI explanations
-(with a fake API client, so no key or network is needed).
+(with a fake API client, so no key or network is needed). GitHub Actions runs them
+on every pull request and push to `main` (Python 3.10, 3.12 and 3.13), see
+`.github/workflows/tests.yml`.
 
 ## Getting your bill as a CSV
 
