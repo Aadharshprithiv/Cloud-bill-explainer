@@ -12,9 +12,11 @@ from flask.wrappers import Request
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from analysis import analyze
+from explain.ai import AISettings
 from explain.templates import format_quantity, money
 from parsers.cur_parser import MAX_BYTES, BillParseError
 
+DEFAULT_MODEL = "claude-opus-5-5"
 SAMPLE_BILL = Path(__file__).resolve().parent / "sample_data" / "sample_aws_bill.csv"
 
 
@@ -32,7 +34,8 @@ def create_app(config: dict | None = None) -> Flask:
         # 20 MB file plus a little room for the rest of the form.
         MAX_CONTENT_LENGTH=MAX_BYTES + 64 * 1024,
         ANTHROPIC_API_KEY=os.environ.get("ANTHROPIC_API_KEY", ""),
-        ANTHROPIC_MODEL=os.environ.get("ANTHROPIC_MODEL", ""),
+        ANTHROPIC_MODEL=os.environ.get("ANTHROPIC_MODEL", DEFAULT_MODEL),
+        ANTHROPIC_EFFORT=os.environ.get("ANTHROPIC_EFFORT", "low"),
     )
     if config:
         app.config.update(config)
@@ -71,8 +74,13 @@ def create_app(config: dict | None = None) -> Flask:
         return _render_results(SAMPLE_BILL.read_bytes(), sample=True)
 
     def _render_results(data: bytes, sample: bool):
+        ai_settings = AISettings(
+            api_key=app.config["ANTHROPIC_API_KEY"],
+            model=app.config["ANTHROPIC_MODEL"],
+            effort=app.config["ANTHROPIC_EFFORT"],
+        )
         try:
-            report = analyze(data)
+            report = analyze(data, ai_settings)
         except BillParseError as exc:
             return show_error(exc.user_message)
         return render_template("results.html", report=report, sample=sample)

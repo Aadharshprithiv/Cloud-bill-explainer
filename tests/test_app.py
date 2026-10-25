@@ -11,7 +11,7 @@ from tests.conftest import make_csv
 
 @pytest.fixture()
 def client():
-    return create_app({"TESTING": True}).test_client()
+    return create_app({"TESTING": True, "ANTHROPIC_API_KEY": ""}).test_client()
 
 
 def upload(client, data: bytes, filename="bill.csv"):
@@ -146,3 +146,16 @@ def test_template_explanations():
     assert "virtual server" in server and "m5.large" in server and "744 hours" in server and "$71.42" in server
     unknown = explain_charge({**base, "usage_type": "Mystery-Thing", "instance_type": ""})
     assert "don't have a plain-English description" in unknown
+
+
+def test_results_page_uses_ai_when_configured(monkeypatch):
+    monkeypatch.setattr("explain.explain_with_ai",
+                        lambda groups, settings: {int(g): f"AI explanation {g}." for g in groups["id"]})
+    client = create_app({"TESTING": True, "ANTHROPIC_API_KEY": "test-key"}).test_client()
+    html = client.get("/sample").get_data(as_text=True)
+    assert "AI explanation 1." in html
+    assert "written by AI" in html
+
+
+def test_results_page_without_key_says_templates(client):
+    assert "written from our own templates" in client.get("/sample").get_data(as_text=True)

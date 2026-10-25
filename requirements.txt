@@ -1,4 +1,4 @@
 flask>=3.1,<4
 pandas>=2.2,<4
-anthropic>=0.70
+anthropic>=2.3,<3
 pytest>=8

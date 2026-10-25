@@ -1,6 +1,7 @@
 """Run the whole pipeline on an uploaded bill and shape the result for the templates."""
 
 from explain import explain_groups
+from explain.ai import AISettings
 from explain.templates import format_quantity
 from parsers.cur_parser import parse_cur
 from parsers.grouping import cost_by_service
@@ -18,12 +19,12 @@ def _chart_slices(services: list[tuple[str, float]]) -> list[dict]:
     return slices
 
 
-def analyze(data: bytes) -> dict:
+def analyze(data: bytes, ai_settings: AISettings | None = None) -> dict:
     """Parse, group, run rules and explain. Raises BillParseError for bad files."""
     bill = parse_cur(data)
     ctx = build_context(bill)
     findings = run_rules(ctx)
-    explanations, explanation_source = explain_groups(ctx.groups, bill.currency)
+    explanations, explanation_source = explain_groups(ctx.groups, bill.currency, ai_settings)
 
     flagged = {gid for f in findings for gid in f.group_ids}
     charges = []

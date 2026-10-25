@@ -144,6 +144,7 @@
       <p class="mt-1 text-sm text-slate-600">
         Tap a charge to see the original line from your bill.
         {% if report.explanation_source == "ai" %}Explanations were written by AI using only the numbers in your bill.
+        {% elif report.explanation_source == "mixed" %}Most explanations were written by AI using only the numbers in your bill; the rest come from our own templates.
         {% else %}Explanations are written from our own templates.{% endif %}
       </p>
     </div>
