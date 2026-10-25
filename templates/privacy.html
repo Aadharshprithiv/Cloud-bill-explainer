@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}How it works &amp; privacy · Cloud Bill Explainer{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-3xl px-4 py-10">
+  <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">How it works &amp; privacy</h1>
+  <p class="mt-2 text-slate-600">A short, honest explanation of what happens to your bill.</p>
+
+  <section class="mt-8 rounded-2xl bg-white p-6 ring-1 ring-brand-100">
+    <h2 class="text-lg font-semibold text-slate-900">How it works</h2>
+    <ol class="mt-4 space-y-4">
+      {% for title, text in [
+        ("We read your CSV", "We check it's an AWS Cost and Usage Report and pick out the columns we need: service, usage type, amount, unit, cost and region."),
+        ("We group similar charges", "Hundreds of lines become a short list, for example all the hours of one server type in one region."),
+        ("We translate the names", "Technical names like BoxUsage:t3.micro or ap-southeast-2 become plain words like \"virtual server\" and \"Sydney\"."),
+        ("We look for common waste", "A set of simple rules spots things like unused IP addresses, servers running 24/7 or old backups. Every saving is an estimate, with a confidence level."),
+        ("We explain each charge", "In one or two plain sentences. If AI is switched on, it only sees the grouped charges with all account and resource IDs removed.")
+      ] %}
+      <li class="flex gap-4">
+        <span class="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">{{ loop.index }}</span>
+        <div><p class="font-semibold text-slate-900">{{ title }}</p><p class="text-sm text-slate-600">{{ text }}</p></div>
+      </li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="mt-6 rounded-2xl bg-white p-6 ring-1 ring-brand-100">
+    <h2 class="text-lg font-semibold text-slate-900">Your privacy</h2>
+    <ul class="mt-4 space-y-3 text-slate-700">
+      <li class="flex gap-3"><span class="text-brand-600 font-bold" aria-hidden="true">&#10003;</span><span><strong>Processed in memory, then gone.</strong> Your file is never saved to disk or a database. It's discarded as soon as your results page is ready.</span></li>
+      <li class="flex gap-3"><span class="text-brand-600 font-bold" aria-hidden="true">&#10003;</span><span><strong>Nothing is logged.</strong> We don't keep a copy of your file, your results or anything in them.</span></li>
+      <li class="flex gap-3"><span class="text-brand-600 font-bold" aria-hidden="true">&#10003;</span><span><strong>No passwords or keys, ever.</strong> We never ask for your AWS password, access keys or a connection to your account. Be wary of any site that does.</span></li>
+      <li class="flex gap-3"><span class="text-brand-600 font-bold" aria-hidden="true">&#10003;</span><span><strong>IDs removed before AI.</strong> If AI explanations are on, only grouped totals (service, usage type, region, amount, unit, cost) are sent. Account numbers and resource IDs are stripped first.</span></li>
+      <li class="flex gap-3"><span class="text-brand-600 font-bold" aria-hidden="true">&#10003;</span><span><strong>No accounts, no tracking.</strong> You don't sign up, and there's nothing to delete afterwards.</span></li>
+    </ul>
+  </section>
+
+  <section class="mt-6 rounded-2xl bg-white p-6 ring-1 ring-brand-100">
+    <h2 class="text-lg font-semibold text-slate-900">About the savings</h2>
+    <p class="mt-2 text-slate-700">
+      Savings are <strong>estimates</strong> based only on what's in your bill. We can't see how you use
+      your resources, so a server that looks idle might be important to you. Each suggestion shows a
+      confidence level (high, medium or low). Always check before deleting anything.
+    </p>
+  </section>
+
+  <div class="mt-8">
+    <a href="{{ url_for('index') }}" class="inline-flex items-center rounded-xl bg-brand-600 px-6 py-3 font-semibold text-white hover:bg-brand-700">Explain my bill</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="bg-gradient-to-b from-brand-700 to-brand-600 text-white">
+  <div class="mx-auto max-w-5xl px-4 pt-10 pb-24 sm:pt-14">
+    <h1 class="text-3xl sm:text-4xl font-bold tracking-tight max-w-2xl">Understand your AWS bill in plain English</h1>
+    <p class="mt-4 text-lg text-brand-100 max-w-2xl">
+      Upload your bill and we'll explain every charge in everyday words, then point out things
+      you might be paying for without needing them, with an estimate of what you could save.
+    </p>
+  </div>
+</section>
+
+<div class="mx-auto max-w-5xl px-4 -mt-16 pb-12">
+  <div class="rounded-2xl bg-white shadow-lg shadow-brand-900/5 ring-1 ring-brand-100 p-5 sm:p-8">
+    {% if error %}
+    <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800" role="alert">
+      <p class="font-semibold">We couldn't read that file</p>
+      <p class="mt-1 text-sm">{{ error }}</p>
+    </div>
+    {% endif %}
+
+    <form id="upload-form" action="{{ url_for('analyze_upload') }}" method="post" enctype="multipart/form-data">
+      <label id="dropzone" for="bill"
+             class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-brand-200 bg-brand-50/60 px-4 py-10 text-center cursor-pointer transition hover:border-brand-500 hover:bg-brand-50">
+        <svg class="h-10 w-10 text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="text-base font-semibold text-slate-800">Drag your bill here, or <span class="text-brand-600 underline">choose a file</span></span>
+        <span class="text-sm text-slate-500">AWS Cost and Usage Report, .csv, up to 20 MB</span>
+        <span id="file-name" class="hidden rounded-full bg-brand-100 px-3 py-1 text-sm font-medium text-brand-800"></span>
+        <input id="bill" name="bill" type="file" accept=".csv,text/csv" class="sr-only" required>
+      </label>
+
+      <div class="mt-5 flex flex-col sm:flex-row gap-3">
+        <button type="submit" id="submit-btn"
+                class="inline-flex justify-center items-center gap-2 rounded-xl bg-brand-600 px-6 py-3 font-semibold text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-200 disabled:opacity-60">
+          Explain my bill
+        </button>
+        <a href="{{ url_for('sample') }}"
+           class="inline-flex justify-center items-center rounded-xl border border-brand-200 bg-white px-6 py-3 font-semibold text-brand-700 hover:bg-brand-50 focus:outline-none focus:ring-4 focus:ring-brand-100">
+          Try with sample bill
+        </a>
+      </div>
+    </form>
+
+    <div class="mt-6 flex gap-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+      <svg class="h-5 w-5 flex-none text-brand-600 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        <rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+      </svg>
+      <p>
+        <strong class="text-slate-800">Your privacy:</strong> your file is processed in memory and deleted as
+        soon as your results are ready. We never store or log it, and we will never ask for your AWS
+        password or access keys. <a href="{{ url_for('privacy') }}" class="text-brand-700 underline">How it works</a>
+      </p>
+    </div>
+  </div>
+
+  <div class="mt-10 grid gap-4 sm:grid-cols-3">
+    {% for step in [
+      ("1", "Upload your bill", "Download your monthly Cost and Usage Report from AWS and drop it here."),
+      ("2", "Read it in plain English", "Every charge is explained without jargon: what it is and why you paid for it."),
+      ("3", "Find savings", "We flag likely waste, estimate what you could save and show simple steps to fix it.")
+    ] %}
+    <div class="rounded-2xl bg-white p-5 ring-1 ring-brand-100">
+      <div class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">{{ step[0] }}</div>
+      <h2 class="mt-3 font-semibold">{{ step[1] }}</h2>
+      <p class="mt-1 text-sm text-slate-600">{{ step[2] }}</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <details class="mt-6 rounded-2xl bg-white p-5 ring-1 ring-brand-100 group">
+    <summary class="cursor-pointer font-semibold text-slate-800 list-none flex items-center justify-between">
+      Where do I find my AWS bill as a CSV?
+      <span class="text-brand-600 transition group-open:rotate-180" aria-hidden="true">&#9662;</span>
+    </summary>
+    <ol class="mt-3 list-decimal pl-5 space-y-1 text-sm text-slate-600">
+      <li>Sign in to the AWS console and open <strong>Billing and Cost Management</strong>.</li>
+      <li>Go to <strong>Data Exports</strong> (older accounts: <strong>Cost and Usage Reports</strong>) and create an export if you don't have one. Choose CSV format.</li>
+      <li>AWS saves the report to an S3 bucket within about a day. Download the file for the month you want.</li>
+      <li>If the file ends in <code>.gz</code> or <code>.zip</code>, unzip it first, then upload the <code>.csv</code>.</li>
+    </ol>
+  </details>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='upload.js') }}"></script>
+{% endblock %}
