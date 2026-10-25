@@ -34,4 +34,5 @@ def nat_gateway(ctx: BillContext) -> list[Finding]:
             "then release the Elastic IP it used.",
         ],
         saving_by_group={int(g.id): round(ctx.per_month(g.cost), 2) for g in hours.itertuples()},
+        related_group_ids=[int(g.id) for g in data.itertuples()],
     )]

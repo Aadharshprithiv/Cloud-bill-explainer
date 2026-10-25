@@ -32,4 +32,5 @@ def high_data_transfer(ctx: BillContext) -> list[Finding]:
             "month is free and it is often cheaper than sending data directly.",
             "Compress images and files, and avoid copying data between regions unless needed.",
         ],
+        related_group_ids=[int(g.id) for g in transfer.itertuples()],
     )]

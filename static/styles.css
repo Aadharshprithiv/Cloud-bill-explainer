@@ -1,0 +1,13 @@
+/* Small additions to Tailwind. */
+summary::-webkit-details-marker { display: none; }
+
+@media print {
+  @page { margin: 14mm; }
+  body { background: #fff !important; }
+  .no-print { display: none !important; }
+  .card { box-shadow: none !important; break-inside: avoid; border: 1px solid #dbeafe; }
+  .bg-brand-700.card { background: #fff !important; color: #1e3a8a !important; }
+  .bg-brand-700.card * { color: #1e3a8a !important; }
+  li { break-inside: avoid; }
+  a { text-decoration: none; }
+}

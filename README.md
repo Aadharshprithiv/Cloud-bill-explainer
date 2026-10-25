@@ -3,7 +3,7 @@ The problem it solves  Cloud bills are confusing. A line on an AWS bill looks li
 
 ## Status
 
-Work in progress. Done: stage 1 (sample data, CSV parser, tests) and stage 2 (waste rules, tests).
+Work in progress. Done: stage 1 (sample data, CSV parser), stage 2 (waste rules) and stage 3 (web UI). Next: AI explanations.
 
 ## Setup
 
@@ -13,7 +13,21 @@ pip install -r requirements.txt
 python -m pytest
 ```
 
+## Run the app
+
+```bash
+flask --app app run          # then open http://127.0.0.1:5000
+```
+
+Click **Try with sample bill** to see a full report without uploading anything.
+Pages use Tailwind CSS and Chart.js from public CDNs, so the browser needs internet access.
+
 ## Project layout (so far)
+
+- `app.py` – Flask routes: upload page, results, sample bill, privacy page. Uploads are kept in memory (never written to disk) and are not stored or logged
+- `analysis.py` – runs the whole pipeline and shapes the results for the page
+- `explain/` – plain-English explanations for each charge (template-based for now)
+- `templates/`, `static/` – Jinja pages (blue theme, Tailwind CDN), drag-and-drop upload, Chart.js donut, print styles for "Download report"
 
 - `parsers/cur_parser.py` – reads and validates an AWS Cost and Usage Report CSV (legacy and CUR 2.0 headers), in memory, with friendly errors
 - `parsers/grouping.py` – totals charges per service + usage type + region

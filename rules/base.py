@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 
+from explain.templates import money
 from parsers.cur_parser import ParsedBill
 from parsers.grouping import group_line_items
 from parsers.names import split_usage_prefix
@@ -32,6 +33,8 @@ class Finding:
     saving_by_group: dict[int, float] = field(default_factory=dict)
     # Resources the user can look for in the AWS console (shown in the UI only).
     resources: list[str] = field(default_factory=list)
+    # Charges the finding is about but doesn't claim a saving for.
+    related_group_ids: list[int] = field(default_factory=list)
 
     def __post_init__(self):
         if self.confidence not in CONFIDENCE_LEVELS:
@@ -46,7 +49,8 @@ class Finding:
 
     @property
     def group_ids(self) -> list[int]:
-        return list(self.saving_by_group)
+        """Every charge this finding is about."""
+        return list(dict.fromkeys([*self.saving_by_group, *self.related_group_ids]))
 
 
 @dataclass
@@ -65,8 +69,7 @@ class BillContext:
         return regional.groupby("region")["cost"].sum().idxmax()
 
     def money(self, amount: float) -> str:
-        prefix = "$" if self.currency == "USD" else f"{self.currency} "
-        return f"{prefix}{amount:,.2f}"
+        return money(amount, self.currency)
 
     def per_month(self, amount: float) -> float:
         return amount / self.months

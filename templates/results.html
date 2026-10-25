@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% set cur = report.currency %}
+{% block title %}Your bill explained · Cloud Bill Explainer{% endblock %}
+
+{% macro confidence_badge(level) -%}
+  {%- set styles = {
+    "high": "bg-emerald-50 text-emerald-800 ring-emerald-200",
+    "medium": "bg-amber-50 text-amber-800 ring-amber-200",
+    "low": "bg-slate-100 text-slate-700 ring-slate-200"} -%}
+  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 {{ styles[level] }}">{{ level|capitalize }} confidence</span>
+{%- endmacro %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl px-4 py-8 sm:py-10">
+
+  {% if sample %}
+  <div class="mb-6 rounded-xl bg-brand-100 px-4 py-3 text-sm text-brand-900 no-print">
+    You're looking at a <strong>sample bill</strong> with made-up data.
+    <a href="{{ url_for('index') }}" class="underline font-medium">Upload your own bill</a>
+  </div>
+  {% endif %}
+
+  <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Your AWS bill, explained</h1>
+      {% if report.period_start %}
+      <p class="mt-1 text-slate-600">
+        Charges from {{ report.period_start|nice_date }} to {{ report.period_end|nice_date }}
+        {%- if report.months > 1 %} ({{ report.months }} months; savings are shown per month){% endif %}
+      </p>
+      {% endif %}
+    </div>
+    <div class="flex gap-3 no-print">
+      <button type="button" onclick="window.print()"
+              class="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-200"
+              title="Opens a print-friendly version. Choose 'Save as PDF' to download it.">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Download report
+      </button>
+      <a href="{{ url_for('index') }}" class="inline-flex items-center rounded-xl border border-brand-200 bg-white px-4 py-2.5 text-sm font-semibold text-brand-700 hover:bg-brand-50">New bill</a>
+    </div>
+  </div>
+
+  {% if report.warnings %}
+  <div class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+    <p class="font-semibold">A few things to know about this file</p>
+    <ul class="mt-1 list-disc pl-5 space-y-0.5">{% for w in report.warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  {# Summary cards #}
+  <div class="mt-6 grid gap-4 sm:grid-cols-3">
+    <div class="rounded-2xl bg-white p-5 ring-1 ring-brand-100 card">
+      <p class="text-sm font-medium text-slate-500">Total cost</p>
+      <p class="mt-1 text-3xl font-bold text-slate-900">{{ report.total_cost|money(cur) }}</p>
+      <p class="mt-1 text-sm text-slate-500">{{ report.charges|length }} different charges</p>
+    </div>
+    <div class="rounded-2xl bg-brand-700 p-5 text-white card">
+      <p class="text-sm font-medium text-brand-100">Estimated potential saving</p>
+      <p class="mt-1 text-3xl font-bold">~{{ report.total_saving|money(cur) }}<span class="text-base font-medium text-brand-100"> / month</span></p>
+      <p class="mt-1 text-sm text-brand-100">An estimate, if you act on every suggestion below</p>
+    </div>
+    <div class="rounded-2xl bg-white p-5 ring-1 ring-brand-100 card">
+      <p class="text-sm font-medium text-slate-500">Issues found</p>
+      <p class="mt-1 text-3xl font-bold text-slate-900">{{ report.findings|length }}</p>
+      <p class="mt-1 text-sm text-slate-500">{% if report.findings %}Things worth checking{% else %}Nothing obvious to fix{% endif %}</p>
+    </div>
+  </div>
+
+  {# Cost by service #}
+  {% if report.chart %}
+  <section class="mt-8 rounded-2xl bg-white p-5 sm:p-6 ring-1 ring-brand-100 card">
+    <h2 class="text-lg font-semibold text-slate-900">Where your money went</h2>
+    <div class="mt-4 grid items-center gap-6 sm:grid-cols-[minmax(0,240px)_1fr]">
+      <div class="relative mx-auto w-full max-w-[240px] aspect-square">
+        <canvas id="service-chart" aria-label="Donut chart of cost by service" role="img"></canvas>
+        <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+          <span class="text-xs text-slate-500">Total</span>
+          <span class="text-lg font-bold text-slate-900">{{ report.total_cost|money(cur) }}</span>
+        </div>
+      </div>
+      <ul class="space-y-2" id="service-legend">
+        {% for slice in report.chart %}
+        <li class="flex items-center gap-3 text-sm">
+          <span class="legend-swatch h-3 w-3 flex-none rounded-sm" data-index="{{ loop.index0 }}"></span>
+          <span class="flex-1 text-slate-700">{{ slice.label }}</span>
+          <span class="font-semibold text-slate-900 tabular-nums">{{ slice.cost|money(cur) }}</span>
+          <span class="w-12 text-right text-slate-500 tabular-nums">{{ "%.0f"|format(100 * slice.cost / report.total_cost) if report.total_cost > 0 else 0 }}%</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <script id="chart-data" type="application/json" data-currency="{{ cur }}">{{ report.chart|tojson }}</script>
+  </section>
+  {% endif %}
+
+  {# Top savings #}
+  <section class="mt-8">
+    <h2 class="text-lg font-semibold text-slate-900">Top savings</h2>
+    {% if report.findings %}
+    <p class="mt-1 text-sm text-slate-600">Biggest estimated savings first. Each one is a suggestion to check, not a certainty: you know best what you still need.</p>
+    <div class="mt-4 grid gap-4">
+      {% for f in report.findings %}
+      <article class="rounded-2xl bg-white p-5 sm:p-6 ring-1 ring-brand-100 card">
+        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+          <div>
+            <h3 class="font-semibold text-slate-900">{{ f.title }}</h3>
+            <div class="mt-2">{{ confidence_badge(f.confidence) }}</div>
+          </div>
+          <div class="sm:text-right flex-none">
+            {% if f.saving is not none %}
+            <p class="text-2xl font-bold text-brand-700">~{{ f.saving|money(cur) }}<span class="text-sm font-medium text-slate-500"> / month</span></p>
+            <p class="text-xs text-slate-500">estimated saving</p>
+            {% else %}
+            <p class="text-sm font-medium text-slate-600">Saving can't be estimated</p>
+            <p class="text-xs text-slate-500">worth investigating</p>
+            {% endif %}
+          </div>
+        </div>
+        <p class="mt-3 text-slate-700">{{ f.explanation }}</p>
+        <div class="mt-4 rounded-xl bg-brand-50 p-4">
+          <p class="text-sm font-semibold text-brand-900">How to fix it</p>
+          <ol class="mt-2 list-decimal pl-5 space-y-1 text-sm text-slate-700">
+            {% for step in f.steps %}<li>{{ step }}</li>{% endfor %}
+          </ol>
+          {% if f.resources %}
+          <p class="mt-3 text-xs text-slate-600">Look for: {% for r in f.resources %}<code class="rounded bg-white px-1.5 py-0.5 text-slate-800 break-all">{{ r }}</code>{% if not loop.last %} {% endif %}{% endfor %}</p>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="mt-4 rounded-2xl bg-white p-6 ring-1 ring-brand-100 text-slate-700">
+      We didn't spot any of the common money-wasters in this bill. Nice work!
+    </div>
+    {% endif %}
+  </section>
+
+  {# All charges #}
+  <section class="mt-8 rounded-2xl bg-white ring-1 ring-brand-100 card overflow-hidden">
+    <div class="p-5 sm:p-6 border-b border-brand-100">
+      <h2 class="text-lg font-semibold text-slate-900">Every charge, explained</h2>
+      <p class="mt-1 text-sm text-slate-600">
+        Tap a charge to see the original line from your bill.
+        {% if report.explanation_source == "ai" %}Explanations were written by AI using only the numbers in your bill.
+        {% else %}Explanations are written from our own templates.{% endif %}
+      </p>
+    </div>
+    <div class="hidden sm:grid grid-cols-[1fr_9rem_7rem] gap-4 px-6 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 bg-slate-50">
+      <span>What it is</span><span class="text-right">Amount used</span><span class="text-right">Cost</span>
+    </div>
+    <ul class="divide-y divide-brand-100">
+      {% for c in report.charges %}
+      <li>
+        <details class="charge group">
+          <summary class="list-none cursor-pointer px-5 sm:px-6 py-4 hover:bg-brand-50/50 grid gap-1 sm:gap-x-4 sm:grid-cols-[1fr_9rem_7rem]">
+            <div>
+              <p class="font-medium text-slate-900 flex flex-wrap items-center gap-2">
+                <span class="first-letter:uppercase">{{ c.usage_name }}</span>
+                {% if c.flagged %}<span class="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-800">See savings</span>{% endif %}
+              </p>
+              <p class="text-xs text-slate-500">{{ c.service_name }} · {{ c.region_name }}</p>
+              <p class="mt-1 text-sm text-slate-700">{{ c.explanation }}</p>
+            </div>
+            <div class="mt-1 sm:mt-0 flex items-baseline justify-between sm:contents">
+              <p class="text-sm text-slate-600 sm:text-right tabular-nums">{{ c.quantity_text }}</p>
+              <p class="font-semibold text-slate-900 sm:text-right tabular-nums">{{ c.cost|money(cur) }}</p>
+            </div>
+            <p class="text-xs text-brand-700 sm:col-span-3 no-print"><span class="group-open:hidden">Show technical details &#9662;</span><span class="hidden group-open:inline">Hide technical details &#9652;</span></p>
+          </summary>
+          <div class="px-5 sm:px-6 pb-4">
+            <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 rounded-xl bg-slate-50 p-4 text-xs font-mono text-slate-700 break-all">
+              <dt class="text-slate-500">lineItem/ProductCode</dt><dd>{{ c.product_code or "-" }}</dd>
+              <dt class="text-slate-500">lineItem/UsageType</dt><dd>{{ c.usage_type }}</dd>
+              <dt class="text-slate-500">product/region</dt><dd>{{ c.region }}</dd>
+              <dt class="text-slate-500">lineItem/UsageAmount</dt><dd>{{ "%.6g"|format(c.usage_amount) }}</dd>
+              <dt class="text-slate-500">pricing/unit</dt><dd>{{ c.unit or "-" }}</dd>
+              <dt class="text-slate-500">lineItem/UnblendedCost</dt><dd>{{ "%.6f"|format(c.cost) }}</dd>
+              {% if c.description %}<dt class="text-slate-500">Description</dt><dd>{{ c.description }}</dd>{% endif %}
+              <dt class="text-slate-500">Lines in your bill</dt><dd>{{ c.line_count }}{% if c.resource_count %} ({{ c.resource_count }} resource{{ "s" if c.resource_count != 1 }}){% endif %}</dd>
+            </dl>
+          </div>
+        </details>
+      </li>
+      {% endfor %}
+    </ul>
+    <div class="px-5 sm:px-6 py-4 bg-slate-50 flex justify-between font-semibold text-slate-900">
+      <span>Total</span><span class="tabular-nums">{{ report.total_cost|money(cur) }}</span>
+    </div>
+  </section>
+
+  <p class="mt-6 text-xs text-slate-500">
+    All savings are estimates based only on this bill. They assume typical usage and current
+    on-demand prices. Check before deleting or changing anything.
+  </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='results.js') }}"></script>
+{% endblock %}
