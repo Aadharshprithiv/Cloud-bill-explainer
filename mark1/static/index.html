@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#05070d">
+<title>Mark 1 — Demo Trading Dashboard</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2305070d'/%3E%3Cpath d='M6 24V8l5 8 5-8v16M21 12l4-4v16' stroke='%2300f0ff' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" class="logo" aria-hidden="true"><path d="M5 25V7l5.5 9L16 7v18M21 12l5-5v18"/></svg>
+    <span class="name">MARK<b>1</b></span>
+    <span class="badge demo" title="Paper trading only. No real orders are ever sent.">DEMO ACCOUNT</span>
+    <span class="badge synth hidden" id="synthBadge" title="No OANDA token or MARK1_DATA=synthetic. Prices are generated, not real.">SYNTHETIC DATA</span>
+  </div>
+  <div class="ticker">
+    <div class="tick"><label id="hPair">XAUUSD</label><span id="hPrice" class="big">—</span></div>
+    <div class="tick"><label>Spread</label><span id="hSpread">—</span></div>
+    <div class="tick"><label>Session</label><span id="hSession">—</span></div>
+    <div class="tick"><label>News</label><span id="hNews" class="chip">—</span></div>
+    <div class="tick"><label>Engine</label><span id="hEngine" class="chip">—</span></div>
+    <div class="tick"><label>Daily R</label><span id="hDaily" class="chip">—</span></div>
+    <div class="tick"><label>Updated</label><span id="hUpdated">—</span></div>
+  </div>
+  <button class="kill" id="btnKill" title="Stops the engine and closes all paper trades">KILL SWITCH</button>
+</header>
+
+<nav class="controls">
+  <button id="btnEngine" class="btn">Start Engine</button>
+  <button id="btnNews" class="btn">Pause for News</button>
+  <button id="btnBacktest" class="btn">Run Backtest</button>
+  <button id="btnSound" class="btn toggle">Sound</button>
+  <button id="btnWhatsApp" class="btn toggle">WhatsApp</button>
+  <a id="btnCsv" class="btn" href="/api/trades.csv" download>Export CSV</a>
+  <span class="ctl-note" id="ctlNote"></span>
+</nav>
+
+<main class="layout">
+  <section class="col-main">
+    <div class="panel chart-panel">
+      <div class="bar">
+        <div class="tabs" id="pairTabs"></div>
+        <div class="tabs small" id="tfTabs"></div>
+      </div>
+      <div class="bar overlays" id="overlayToggles">
+        <label><input type="checkbox" data-ov="fvg" checked> FVG</label>
+        <label><input type="checkbox" data-ov="ob" checked> Order blocks</label>
+        <label><input type="checkbox" data-ov="swings" checked> Swing H/L</label>
+        <label><input type="checkbox" data-ov="structure" checked> BOS/CHoCH</label>
+        <label><input type="checkbox" data-ov="range" checked> 6-to-6 range</label>
+        <label><input type="checkbox" data-ov="ema" checked> EMA 20/50</label>
+      </div>
+      <div class="chart-wrap" id="chartWrap">
+        <div id="chart"></div>
+        <canvas id="overlay"></canvas>
+        <div class="chart-msg hidden" id="chartMsg"></div>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="panel signal-card" id="signalCard">
+        <div class="ph">Signal <span class="muted" id="sigPair"></span></div>
+        <div class="sig-body">
+          <div class="ring-wrap" title="Heuristic score out of 100. Not a probability.">
+            <svg viewBox="0 0 120 120" class="ring">
+              <circle cx="60" cy="60" r="50" class="ring-bg"/>
+              <circle cx="60" cy="60" r="50" class="ring-fg" id="ringFg"/>
+            </svg>
+            <div class="ring-txt"><span id="sigScore">—</span><small>score /100</small></div>
+          </div>
+          <div class="sig-main">
+            <div class="side" id="sigSide">NO TRADE</div>
+            <div class="levels">
+              <div><label>Entry</label><span id="sigEntry">—</span></div>
+              <div><label>SL</label><span id="sigSl" class="neg">—</span></div>
+              <div><label>TP</label><span id="sigTp" class="pos">—</span></div>
+              <div><label>RR</label><span id="sigRr">—</span></div>
+            </div>
+            <div class="muted tiny" id="sigNote"></div>
+          </div>
+        </div>
+        <div class="align">
+          <div class="al" id="alH4"><label>4h</label><span>—</span></div>
+          <div class="al" id="alH1"><label>1h</label><span>—</span></div>
+          <div class="al" id="alM5"><label>5m</label><span>—</span></div>
+          <div class="aligned-badge hidden" id="alAll">ALL ALIGNED</div>
+        </div>
+        <button class="btn wide" id="btnWhy">Why this setup?</button>
+        <div class="why hidden" id="whyBox"></div>
+      </div>
+
+      <div class="panel">
+        <div class="ph">Market grid</div>
+        <table class="grid" id="marketGrid">
+          <thead><tr><th>Pair</th><th>Price</th><th>Spread</th><th>Trend 4h/1h/5m</th><th>Signal</th><th>Score</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="news-list" id="newsList"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Backtest <span class="muted tiny">spread + slippage, SL first, next-bar fills, no lookahead</span></div>
+      <form class="bt-form" id="btForm">
+        <label>Pair <select name="pair" id="btPair"></select></label>
+        <label>Months <select name="months"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select></label>
+        <label>Slippage (pips) <input name="slippage_pips" type="number" step="0.1" min="0" value="0.5"></label>
+        <label class="chk"><input type="checkbox" name="walkforward"> Walk-forward</label>
+        <label>Train d <input name="train_days" type="number" min="5" value="30"></label>
+        <label>Test d <input name="test_days" type="number" min="3" value="14"></label>
+        <button class="btn" type="submit">Run Backtest</button>
+        <span class="muted tiny" id="btStage"></span>
+      </form>
+      <div id="btVerdict" class="verdict hidden"></div>
+      <div class="metrics" id="btMetrics"></div>
+      <div id="equityChart" class="equity"></div>
+      <div id="btFolds"></div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Trade log <span class="muted tiny">paper trades from the engine (SQLite)</span></div>
+      <div class="table-scroll">
+        <table class="log" id="tradeLog">
+          <thead><tr><th>#</th><th>Pair</th><th>Side</th><th>Setup</th><th>Score</th><th>Entry</th><th>SL</th><th>TP</th><th>Opened</th><th>Closed</th><th>Exit</th><th>R</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <aside class="col-side">
+    <div class="panel risk">
+      <div class="ph">Risk</div>
+      <div class="kv"><label>Daily loss limit</label><span id="sDailyLimit">—</span></div>
+      <div class="meter"><div id="dailyMeter"></div></div>
+      <div class="kv"><label>Trailing stop</label><span id="sTrailing">—</span></div>
+      <div class="kv"><label>Open paper trades</label><span id="sOpen">—</span></div>
+      <button class="kill wide" id="btnKill2">KILL SWITCH</button>
+      <button class="btn wide hidden" id="btnKillReset">Reset kill switch</button>
+    </div>
+    <div class="panel">
+      <div class="ph">Proof <span class="muted tiny">closed paper trades</span></div>
+      <div class="kv"><label>Trades</label><span id="sTrades">—</span></div>
+      <div class="kv"><label>Win / loss ratio</label><span id="sWl">—</span></div>
+      <div class="kv"><label>Win rate</label><span id="sWr">—</span></div>
+      <div class="kv"><label>Profit factor</label><span id="sPf">—</span></div>
+      <div class="kv"><label>Total R</label><span id="sTotal">—</span></div>
+      <div class="kv"><label>Max drawdown</label><span id="sDd">—</span></div>
+      <div class="muted tiny" id="sNote"></div>
+      <div class="ph sub">Latest backtest</div>
+      <div id="sBt" class="tiny"></div>
+    </div>
+    <div class="panel assistant">
+      <div class="ph">Assistant <span class="muted tiny">suggest-only</span></div>
+      <div class="chat" id="chat">
+        <div class="msg bot">Commands: <i>show FVG on 5m</i>, <i>why this setup?</i>, <i>set min score to 65</i>, <i>use z 1.5</i>, <i>trailing on</i>, <i>optimize</i>. Strategy changes come with a backtest and wait for your Approve / Reject.</div>
+      </div>
+      <form id="askForm" class="ask"><input id="askInput" placeholder="Type a command…" autocomplete="off"><button class="btn">Send</button></form>
+    </div>
+    <div class="panel tiny muted">
+      <div id="keysInfo"></div>
+      <div id="btcInfo"></div>
+      <p>Mark 1 is a paper-trading research tool on a demo account. Scores are heuristics, not probabilities. Past results do not predict future results.</p>
+    </div>
+  </aside>
+</main>
+
+<script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
